@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # TODO:
-# 1、python 的版本写死了，没有办法指定版本安装了
-# 2、解决 openssl 链接库替换不干净的问题
+# 1、解决 openssl 链接库替换不干净的问题
 
 # 运行流程
 # 1、安装相关依赖（openssl 用源码安装的 lib 库曾经尝试会替换不干净）
@@ -13,9 +12,10 @@
 # 3、配置
 # 4、清理战场
 
+set -e
 URL='https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz'
 HOME=$(env |grep -w HOME | awk -F '=' '{print $2}')
-ARGS=`getopt -a -o u:d:ih -l user:,datebase:,internal,help -- "$@"`
+ARGS=`getopt -a -o u:d:v:ih -l user:,datebase:,version:,internal,help -- "$@"`
 
 usage() {
     echo "Usage:"
@@ -24,16 +24,16 @@ usage() {
     echo "-u| --user option set user for add some config if without this option use current user"
     echo "-i| --internal option for tell program this enviroment just internal or can view internet"
     echo "-d| --datebase option for install which datebase, default install mysql"
+    echo "-v| --version option for setting which python version you want to install"
     echo "-h| --help option for get help "
     exit -1
 }
 
 install_dependency() {
-    if [[ $INTERNAL == 'yes' ]]; then
-        # 这里当时没有用 nc 或 telnet 检测服务是否工作的原因是：并不是所有的机器都预装有 nc 与 telnet，curl 一般是必带所以这样操作
-        curl 10.16.194.19:3128 || (echo "This proxy service maybe break" && exit -1)
-        export http_proxy=10.16.194.19:3128
-    fi
+    # if [[ $INTERNAL == 'yes' ]]; then
+    #     curl 10.16.194.19:3128 || (echo "This proxy service maybe break" && exit -1)
+    #     export http_proxy=10.16.194.19:3128
+    # fi
 
     wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo && yum makecache
     yum -y install gcc-c++ openssl-devel zlib-devel libffi-devel readline-devel bzip2-devel ncurses-devel sqlite-devel gdbm-devel xz-devel tk-devel libuuid-devel libpcap-devel db4-deve nginx
@@ -48,8 +48,9 @@ install_dependency() {
 
 build_python() {
     cd /tmp/
-    wget $URL
-    tar -xzvf Python-3.7.2.tgz
+    URL=$(printf 'https://www.python.org/ftp/python/%s/Python-%s.tgz' $version $version)
+    wget $URL || (echo "This verison does not exist" && exit -1)
+    tar -xzvf Python-$version.tgz
     cd Python-3.7.2
     ./configure --prefix=/usr/local/python3
     ./configure --enable-optimizations
@@ -79,6 +80,7 @@ add_config() {
 remove() {
     rm -rf /etc/yum.repos.d/CentOS-Base.repo
     cd ~ && rm -rf /tmp/Python-3.7.2
+    rm -rf /tmp/Python-3.7.2
 }
 
 [ $? -ne 0 ] && usage
@@ -95,9 +97,15 @@ do
                 db="$2"
                 shift
                 ;;
+        -v|--version)
+                version="$2"
+                shift
+                ;;
         -i|--internal)
-                URL='http://10.16.194.19:808/log/Python-3.7.2.tgz'
                 INTERNAL=yes
+                # 这里当时没有用 nc 或 telnet 检测服务是否工作的原因是：并不是所有的机器都预装有 nc 与 telnet，curl 一般是必带所以这样操作
+                curl 10.16.194.19:3128 || (echo "This proxy service maybe break" && exit -1)
+                export http_proxy=10.16.194.19:3128
                 ;;
         -h|--help)
                 usage
@@ -110,7 +118,7 @@ do
 shift
 done
 
-install_dependency
+#install_dependency
 build_python
-add_config
-remove
+#add_config
+#remove
