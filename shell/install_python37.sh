@@ -1,10 +1,17 @@
 #!/bin/bash
 
+# TODO:
+# 1、python 的版本写死了，没有办法指定版本安装了
+# 2、解决 openssl 链接库替换不干净的问题
+
+# 运行流程
 # 1、安装相关依赖（openssl 用源码安装的 lib 库曾经尝试会替换不干净）
-# 2、下载源码
-#   2.1 添加阿里云原
-#   2.2 安装相关依赖
+#   1.1 判断是否用代理
+#   1.2 添加阿里云原
+#   1.3 安装相关依赖
+# 2、下载源码、编译、软连接
 # 3、配置
+# 4、清理战场
 
 URL='https://www.python.org/ftp/python/3.7.2/Python-3.7.2.tgz'
 HOME=$(env |grep -w HOME | awk -F '=' '{print $2}')
@@ -23,6 +30,7 @@ usage() {
 
 install_dependency() {
     if [[ $INTERNAL == 'yes' ]]; then
+        # 这里当时没有用 nc 或 telnet 检测服务是否工作的原因是：并不是所有的机器都预装有 nc 与 telnet，curl 一般是必带所以这样操作
         curl 10.16.194.19:3128 || (echo "This proxy service maybe break" && exit -1)
         export http_proxy=10.16.194.19:3128
     fi
